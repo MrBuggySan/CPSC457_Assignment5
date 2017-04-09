@@ -106,7 +106,7 @@ int main()
 
 //Create the struct that contains Queue object and id
 	struct thread_data producer_thread_data[NUM_PRODUCER];
-	struct thread_data consumer_thread_data[NUM_PRODUCER];
+	struct thread_data consumer_thread_data[NUM_CONSUMER];
 
 //Create a single Queue object
 	Queue* queue = new Queue();
