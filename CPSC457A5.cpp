@@ -100,7 +100,7 @@ int main()
 	/* Initialize and set thread detached attribute */
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-	void *status;
+
 
 	// pthread_mutex_init(&lock,NULL);
 
@@ -112,7 +112,7 @@ int main()
 	Queue* queue = new Queue();
 
 
-//Create the producer threads
+  //Create the producer threads
 	for(int i = 0; i < NUM_PRODUCER; i++){
 		producer_thread_data[i].thread_id = i;
 		producer_thread_data[i].q = queue;
@@ -123,10 +123,10 @@ int main()
 	    printf("ERROR; return code from producer pthread_create() is %d\n", rc);
 	    exit(-1);
 	    }
-	  }
-	}
+  }
 
-//Create the consumer threads
+
+  //Create the consumer threads
 	for(int i = 0; i < NUM_CONSUMER; i++){
 		consumer_thread_data[i].thread_id = i;
 		consumer_thread_data[i].q = queue;
@@ -137,29 +137,28 @@ int main()
 	    printf("ERROR; return code from consumer pthread_create() is %d\n", rc);
 	    exit(-1);
 	    }
-	  }
-	}
+  }
+
 
 	//Wait for all of the other threads to join
 	pthread_attr_destroy(&attr);
-  for(t=0; t< NUM_PRODUCER + NUM_CONSUMER; t++) {
+  for(int t=0; t< NUM_PRODUCER + NUM_CONSUMER; t++) {
 		if(t >= NUM_PRODUCER){
-			rc = pthread_join(Consumer_Threads[t], &status);
+			rc = pthread_join(Consumer_Threads[t], NULL);
 		}else{
-			rc = pthread_join(Producer_Threads[t], &status);
+			rc = pthread_join(Producer_Threads[t], NULL);
 		}
      if (rc) {
         printf("ERROR; return code from pthread_join() is %d\n", rc);
         exit(-1);
         }
-     printf("Main: completed join with thread %ld having a status
-           of %ld\n",t,(long)status);
+
    }
 
 	//delete pointers
 	delete queue;
 
 	printf("Main: program completed. Exiting.\n");
-	pthread_mutex_destroy(&mutex);
+	// pthread_mutex_destroy(&mutex);
 	pthread_exit(NULL);
 }

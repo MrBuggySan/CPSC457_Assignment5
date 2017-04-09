@@ -3,24 +3,27 @@
 
 #define MAX_QUEUE_SIZE 20
 
+typedef char uint8_t;
+
 class Queue{
   private:
     // QUEUE
-    struct queue{
-    	int element[MAX_QUEUE_SIZE];
-    	uint8_t head;
-    	uint8_t tail;
-    	uint8_t remaining_elements;
-    } q;
+    // struct queue{
+    // 	int element[MAX_QUEUE_SIZE];
+    // 	uint8_t head;
+    // 	uint8_t tail;
+    // 	uint8_t remaining_elements;
+    // } q;
 
+    int q;
   public:
     Queue();
 
-    queue_initialize();
-    queue_add(int elem);
-    queue_remove();
-    queue_full();
-}
+    void queue_initialize();
+    void queue_add(int elem);
+    int queue_remove();
+    bool queue_full();
+};
 
 
 #endif

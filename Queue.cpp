@@ -4,7 +4,7 @@ using namespace std;
 
 
 Queue:Queue(){
-  
+  this.q = 0;
 }
 
 void Queue::queue_initialize()
@@ -64,7 +64,7 @@ int Queue::queue_remove()
 	return prodMsg;
 }
 
-boolean Queue::queue_full()
+bool Queue::queue_full()
 {
 	if(remaining_elements >= MAX_QUEUE_SIZE)
 	{
