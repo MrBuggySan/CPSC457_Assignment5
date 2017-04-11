@@ -12,6 +12,8 @@ struct thread_data
    int	thread_id;
    Queue* pQ;
    pthread_mutex_t* plock;
+   pthread_cond_t* pcond;
+   boolean* prod_waiting;
 };
 
 // CONSUMER routine
@@ -24,28 +26,36 @@ void *consumer(void *threadArgs){
 	while(msg_recieved_counter <= 100){
 
 		//try to lock
-    pthread_mutex_lock(threadArgs->plock);
+    pthread_mutex_lock(cons_data->plock);
 
 		//is the queue empty?
-    if(!cons_data->pq->is_queue_empty){
-      //not empty
-			//get an element from the queue
-      prod_id = cons_data->pq->queue_remove();
-		    //was the queue full before?
-					//yes - signal the producer
-					// no - keep going
-    }else{
+    if(cons_data->pQ->is_queue_empty){
       //empty - pthread_cond_wait
-
+      pthread_cond_wait(prod_data->pcond);
     }
-    pthread_mutex_unlock(threadArgs->plock);
+    //not empty
 
+    //check if queue was full
+    bool wasFull = prod_data->pQ->is_queue_full();
 
-  	printf("Consumer thread #%d has recieved the message of %d\n", cons_id,  prod_id );
+    //get an element from the queue
+    prod_id = cons_data->pq->queue_remove();
+    msg_recieved_counter++;
+    printf("Consumer thread #%d has recieved the message of %d\n", cons_id,  prod_id );
+
+    //was the queue full before?
+    if(wasFull){
+        //yes - signal the producer
+        pthread_cond_signal(prod_data->pcond);
+    }
+    // no - keep going
+
 
     //unlock
-    printf("%d\n", msgOut);
-    msg_recieved_counter++;
+    pthread_mutex_unlock(cons_data->plock);
+
+
+
   }
 
 
@@ -55,26 +65,42 @@ void *consumer(void *threadArgs){
 // PRODUCER routine
 void *producer(void *threadArgs)
 {
+  struct thread_data *prod_data = (struct thread_data *)threadArgs;
   int msg_sent_counter = 0;
 
 	while(msg_sent_counter <= 10){
     //try to lock
-    pthread_mutex_lock(threadArgs->plock);
+    pthread_mutex_lock(prod_data->plock);
 
-  	//is the queue full?
-  		//full- pthread_cond_wait
+    //check if a producer is waiting
+    if(*(prod_data->prod_waiting)){
+      //is the queue full?
+      if(prod_data->pQ->is_queue_full()){
+        //full- pthread_cond_wait
+        *(prod_data->prod_waiting) = true;
+        pthread_cond_wait(prod_data->pcond);
+        *(prod_data->prod_waiting) = false;
+      }
+      //not full
 
-  		//not full
-  			//add the id to the queue
-  			//was it empty before?
-  				//yes - signal the consumer
-  				//no - keep going
+      //check if queue was empty
+      bool wasEmpty = prod_data->pQ->is_queue_empty();
 
+      //add the id to the queue
+      prod_data->pQ->queue_add(prod_data->thread_id);
+      msg_sent_counter++;
+      printf("Producer #%d thread has written the message to the queue\n", prod_data->thread_id);
+
+      //was it empty before?
+      if(wasEmpty){
+        //yes - signal the consumer
+        pthread_cond_signal(prod_data->pcond);
+      }
+    }
   	//unlock
+    pthread_mutex_unlock(threadArgs->plock);
   }
-	//test
-	struct thread_data *prod_data = (struct thread_data *)threadArgs;
-	printf("Producer thread #%d has recieved the arguments\n", prod_data->thread_id);
+
 	pthread_exit(NULL);
 }
 
@@ -82,8 +108,11 @@ void *producer(void *threadArgs)
 int main()
 {
 	int rc=0;
-	// pthread_cond_t notfull;
-	// pthread_cond_t empty;
+
+
+  pthread_cond_t thread_cond;
+
+  pthread_cond_init (&thread_cond, NULL);
 
 	pthread_t Producer_Threads[NUM_PRODUCER];
 	pthread_t Consumer_Threads[NUM_CONSUMER];
@@ -103,12 +132,15 @@ int main()
 //Create a single Queue object
 	Queue* queue = new Queue();
 
-
+  bool *wait_flag = new bool;
+  *wait_flag = false;
   //Create the producer threads
 	for(int i = 0; i < NUM_PRODUCER; i++){
 		producer_thread_data[i].thread_id = i;
 		producer_thread_data[i].pQ = queue;
     producer_thread_data[i].plock = &lock;
+    producer_thread_data[i].pcond = &thread_cond;
+    producer_thread_data[i].prod_waiting = wait_flag;
 		// printf("Creating producer #%d \n", i);
 		rc = pthread_create(&Producer_Threads[i], &attr, producer, (void *)
 	       &producer_thread_data[i]);
@@ -124,6 +156,7 @@ int main()
 		consumer_thread_data[i].thread_id = i;
 		consumer_thread_data[i].pQ = queue;
     consumer_thread_data[i].plock = &lock;
+    consumer_thread_data[i].pcond = &thread_cond;
 		// printf("Creating consumer #%d \n", i);
 		rc = pthread_create(&Consumer_Threads[i], &attr, consumer, (void *)
 	       &consumer_thread_data[i]);
@@ -161,6 +194,7 @@ int main()
 	//delete pointers
 	delete queue;
   pthread_mutex_destroy(&lock);
+  pthread_cond_destroy(&thread_cond);
 
 	printf("Main: program completed. Exiting.\n");
 	// pthread_mutex_destroy(&mutex);
