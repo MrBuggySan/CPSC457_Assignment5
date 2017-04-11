@@ -13,40 +13,40 @@ struct thread_data
    Queue* pQ;
    pthread_mutex_t* plock;
    pthread_cond_t* pcond;
-   boolean* prod_waiting;
+   bool* prod_waiting;
 };
 
 // CONSUMER routine
 void *consumer(void *threadArgs){
 	int msg_recieved_counter = 0;
   int prod_id = -1;
-  int cons_id = cons_data->thread_id;
+  
   struct thread_data *cons_data = (struct thread_data *)threadArgs;
-
+	int cons_id = cons_data->thread_id;
 	while(msg_recieved_counter <= 100){
 
 		//try to lock
     pthread_mutex_lock(cons_data->plock);
 
 		//is the queue empty?
-    if(cons_data->pQ->is_queue_empty){
+    if(cons_data->pQ->is_queue_empty()){
       //empty - pthread_cond_wait
-      pthread_cond_wait(prod_data->pcond);
+      pthread_cond_wait(cons_data->pcond, cons_data->plock);
     }
     //not empty
 
     //check if queue was full
-    bool wasFull = prod_data->pQ->is_queue_full();
+    bool wasFull = cons_data->pQ->is_queue_full();
 
     //get an element from the queue
-    prod_id = cons_data->pq->queue_remove();
+    prod_id = cons_data->pQ->queue_remove();
     msg_recieved_counter++;
     printf("Consumer thread #%d has recieved the message of %d\n", cons_id,  prod_id );
 
     //was the queue full before?
     if(wasFull){
         //yes - signal the producer
-        pthread_cond_signal(prod_data->pcond);
+        pthread_cond_signal(cons_data->pcond);
     }
     // no - keep going
 
@@ -78,7 +78,7 @@ void *producer(void *threadArgs)
       if(prod_data->pQ->is_queue_full()){
         //full- pthread_cond_wait
         *(prod_data->prod_waiting) = true;
-        pthread_cond_wait(prod_data->pcond);
+        pthread_cond_wait(prod_data->pcond, prod_data->plock);
         *(prod_data->prod_waiting) = false;
       }
       //not full
@@ -98,7 +98,7 @@ void *producer(void *threadArgs)
       }
     }
   	//unlock
-    pthread_mutex_unlock(threadArgs->plock);
+    pthread_mutex_unlock(prod_data->plock);
   }
 
 	pthread_exit(NULL);
@@ -131,6 +131,7 @@ int main()
 
 //Create a single Queue object
 	Queue* queue = new Queue();
+  queue->queue_initialize();
 
   bool *wait_flag = new bool;
   *wait_flag = false;
