@@ -2,11 +2,6 @@
 
 using namespace std;
 
-
-Queue:Queue(){
-  this.q = 0;
-}
-
 void Queue::queue_initialize()
 {
 	q.head = NULL;

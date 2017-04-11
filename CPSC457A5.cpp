@@ -51,7 +51,7 @@ void *consumer(void *threadArgs){
 
 	//test
 	struct thread_data *cons_data = (struct thread_data *)threadArgs;
-	printf("Consumer thread #%d has recieved the arguments", cons_data->thread_id);
+	printf("Consumer thread #%d has recieved the arguments\n", cons_data->thread_id);
 	pthread_exit(NULL);
 }
 
@@ -80,14 +80,14 @@ void *producer(void *threadArgs)
 
 	//test
 	struct thread_data *prod_data = (struct thread_data *)threadArgs;
-	printf("Producer thread #%d has recieved the arguments", prod_data->thread_id);
+	printf("Producer thread #%d has recieved the arguments\n", prod_data->thread_id);
 	pthread_exit(NULL);
 }
 
 // MAIN
 int main()
 {
-	int rc;
+	int rc=0;
 	// pthread_mutex_t lock;
 
 	//?
@@ -116,7 +116,7 @@ int main()
 	for(int i = 0; i < NUM_PRODUCER; i++){
 		producer_thread_data[i].thread_id = i;
 		producer_thread_data[i].q = queue;
-		printf("Creating producer #%d \n", i);
+		// printf("Creating producer #%d \n", i);
 		rc = pthread_create(&Producer_Threads[i], &attr, producer, (void *)
 	       &producer_thread_data[i]);
 	  if (rc) {
@@ -130,7 +130,7 @@ int main()
 	for(int i = 0; i < NUM_CONSUMER; i++){
 		consumer_thread_data[i].thread_id = i;
 		consumer_thread_data[i].q = queue;
-		printf("Creating consumer #%d \n", i);
+		// printf("Creating consumer #%d \n", i);
 		rc = pthread_create(&Consumer_Threads[i], &attr, consumer, (void *)
 	       &consumer_thread_data[i]);
 	  if (rc) {
@@ -139,19 +139,28 @@ int main()
 	    }
   }
 
-
+  rc = 0;
 	//Wait for all of the other threads to join
 	pthread_attr_destroy(&attr);
   for(int t=0; t< NUM_PRODUCER + NUM_CONSUMER; t++) {
 		if(t >= NUM_PRODUCER){
-			rc = pthread_join(Consumer_Threads[t], NULL);
+			rc = pthread_join(Consumer_Threads[t - NUM_PRODUCER], NULL);
+      if (rc) {
+         printf("Consumer thread #%d ERROR; return code from pthread_join() is %d\n", t,rc);
+         exit(-1);
+       }else{
+         printf("Consumer thread #%d has exited succesfully\n",t);
+       }
 		}else{
 			rc = pthread_join(Producer_Threads[t], NULL);
+      if (rc) {
+         printf("Producer thread #%d ERROR; return code from pthread_join() is %d\n", t,rc);
+         exit(-1);
+       }else{
+         printf("Producer thread #%d has exited succesfully\n",t);
+       }
 		}
-     if (rc) {
-        printf("ERROR; return code from pthread_join() is %d\n", rc);
-        exit(-1);
-        }
+
 
    }
 
