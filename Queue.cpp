@@ -39,34 +39,30 @@ void Queue::queue_add(int elem)
 	pthread_mutex_unlock(&lock);
 }
 
-int Queue::queue_remove()
-{
-	pthread_mutex_lock(&lock);
+int Queue::queue_remove(){
 	int prodMsg;
 	prodMsg = q.element[q.head];
 	q.remaining_elements--;
 	q.head++;
-	if(q.head >= MAX_QUEUE_SIZE)
-	{
+	if(q.head >= MAX_QUEUE_SIZE){
 		q.head = 0;
 	}
-	if(q.remaining_elements <= 0)
-	{
+	if(q.remaining_elements <= 0){
 		q.head = NULL;
 		q.tail = NULL;
 	}
-	pthread_mutex_unlock(&lock);
 	return prodMsg;
 }
 
-bool Queue::queue_full()
-{
-	if(remaining_elements >= MAX_QUEUE_SIZE)
-	{
+bool Queue::queue_full(){
+	if(remaining_elements >= MAX_QUEUE_SIZE){
 		return true;
 	}
-	else
-	{
+	else{
 		return false;
 	}
+}
+
+bool Queue:is_queue_empty(){
+  return (remaining_elements == 0)? true: false;
 }

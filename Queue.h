@@ -22,6 +22,7 @@ class Queue{
     void queue_add(int elem);
     int queue_remove();
     bool queue_full();
+    bool is_queue_empty();
 };
 
 
