@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "Queue.h"
-
+#include <stdint.h>
 #define NUM_PRODUCER 10
 #define NUM_CONSUMER 1
 
@@ -23,15 +23,18 @@ void *consumer(void *threadArgs){
   
   struct thread_data *cons_data = (struct thread_data *)threadArgs;
 	int cons_id = cons_data->thread_id;
+	
 	while(msg_recieved_counter <= 100){
 
 		//try to lock
     pthread_mutex_lock(cons_data->plock);
-
+	//printf("Consumer #%d has the lock\n", cons_id);
 		//is the queue empty?
     if(cons_data->pQ->is_queue_empty()){
       //empty - pthread_cond_wait
+	  printf("Consumer #%d is waiting\n", cons_id);
       pthread_cond_wait(cons_data->pcond, cons_data->plock);
+	  printf("Consumer #%d finished waiting\n", cons_id);
     }
     //not empty
 
@@ -40,9 +43,13 @@ void *consumer(void *threadArgs){
 
     //get an element from the queue
     prod_id = cons_data->pQ->queue_remove();
-    msg_recieved_counter++;
-    printf("Consumer thread #%d has recieved the message of %d\n", cons_id,  prod_id );
-
+    printf("Consumer thread #%d has recieved the %d'th message of %d\n", cons_id, msg_recieved_counter,  prod_id);
+	msg_recieved_counter++;
+    
+	//random delay 
+	
+	//print the delay 
+	
     //was the queue full before?
     if(wasFull){
         //yes - signal the producer
@@ -50,8 +57,10 @@ void *consumer(void *threadArgs){
     }
     // no - keep going
 
+	
 
     //unlock
+	//printf("Consumer #%d has unlocked\n", cons_id);
     pthread_mutex_unlock(cons_data->plock);
 
 
@@ -67,18 +76,21 @@ void *producer(void *threadArgs)
 {
   struct thread_data *prod_data = (struct thread_data *)threadArgs;
   int msg_sent_counter = 0;
+  printf("Producer #%d is now starting\n", prod_data->thread_id);
 
 	while(msg_sent_counter <= 10){
     //try to lock
     pthread_mutex_lock(prod_data->plock);
-
+	//printf("Producer #%d has the lock\n", prod_data->thread_id);
     //check if a producer is waiting
-    if(*(prod_data->prod_waiting)){
+    if(!*(prod_data->prod_waiting)){
       //is the queue full?
       if(prod_data->pQ->is_queue_full()){
         //full- pthread_cond_wait
+		printf("Producer #%d is waiting\n", prod_data->thread_id);
         *(prod_data->prod_waiting) = true;
         pthread_cond_wait(prod_data->pcond, prod_data->plock);
+		printf("Producer #%d has stopped waiting\n", prod_data->thread_id);
         *(prod_data->prod_waiting) = false;
       }
       //not full
@@ -88,9 +100,14 @@ void *producer(void *threadArgs)
 
       //add the id to the queue
       prod_data->pQ->queue_add(prod_data->thread_id);
-      msg_sent_counter++;
-      printf("Producer #%d thread has written the message to the queue\n", prod_data->thread_id);
+      printf("Producer #%d thread has written the message #%d to the queue\n", prod_data->thread_id, msg_sent_counter);
+	  msg_sent_counter++;
+      
+	  
+	  //random delay 
 
+	  //print delay
+	  
       //was it empty before?
       if(wasEmpty){
         //yes - signal the consumer
@@ -98,6 +115,7 @@ void *producer(void *threadArgs)
       }
     }
   	//unlock
+	//printf("Producer #%d has unlocked\n", prod_data->thread_id);
     pthread_mutex_unlock(prod_data->plock);
   }
 
@@ -136,6 +154,7 @@ int main()
   bool *wait_flag = new bool;
   *wait_flag = false;
   //Create the producer threads
+  printf("Starting producer threads.\n");
 	for(int i = 0; i < NUM_PRODUCER; i++){
 		producer_thread_data[i].thread_id = i;
 		producer_thread_data[i].pQ = queue;
@@ -151,7 +170,7 @@ int main()
 	    }
   }
 
-
+printf("Starting consumer threads.\n");
   //Create the consumer threads
 	for(int i = 0; i < NUM_CONSUMER; i++){
 		consumer_thread_data[i].thread_id = i;
@@ -177,7 +196,7 @@ int main()
          printf("Consumer thread #%d ERROR; return code from pthread_join() is %d\n", t,rc);
          exit(-1);
        }else{
-         printf("Consumer thread #%d has exited succesfully\n",t);
+         printf("Consumer thread #%d has exited succesfully\n", t - NUM_PRODUCER);
        }
 		}else{
 			rc = pthread_join(Producer_Threads[t], NULL);
